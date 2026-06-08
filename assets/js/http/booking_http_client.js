@@ -199,7 +199,18 @@ App.Http.Booking = (function () {
 
         const url = App.Utils.Url.siteUrl('booking/register');
 
-        const $layer = $('<div/>');
+        const $layer = $('<div/>', {
+            'class': 'booking-loading-overlay',
+        });
+
+        const $spinner = $('<div/>', {
+            'class': 'booking-loading-spinner',
+        }).html(`
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <div class="mt-3 fw-semibold">${typeof lang === 'function' ? lang('processing') : 'Processing...'}</div>
+        `);
 
         $.ajax({
             url: url,
@@ -207,15 +218,8 @@ App.Http.Booking = (function () {
             data: data,
             dataType: 'json',
             beforeSend: () => {
-                $layer.appendTo('body').css({
-                    background: 'white',
-                    position: 'fixed',
-                    top: '0',
-                    left: '0',
-                    height: '100vh',
-                    width: '100vw',
-                    opacity: '0.5',
-                });
+                $layer.appendTo('body');
+                $spinner.appendTo('body');
             },
         })
             .done((response) => {
@@ -255,6 +259,7 @@ App.Http.Booking = (function () {
             })
             .always(() => {
                 $layer.remove();
+                $spinner.remove();
             });
     }
 
