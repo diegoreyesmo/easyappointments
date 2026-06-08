@@ -11,16 +11,15 @@
 <div id="frame-footer" class="p-3 text-center border-top">
     <small class="d-block d-md-flex">
         <span class="footer-powered-by small d-block w-100 w-md-50 text-center text-md-start p-1 pe-md-0">
-            Powered By
-            <a href="https://easyappointments.org" target="_blank">Easy!Appointments</a>
-
             <?php if (!empty($legal_notice_url)): ?>
-                <span>|</span>
                 <a href="<?= e($legal_notice_url) ?>" target="_blank"><?= lang('legal_notice') ?></a>
             <?php endif; ?>
 
-            <?php if (!empty($imprint_url)): ?>
+            <?php if (!empty($legal_notice_url) && !empty($imprint_url)): ?>
                 <span>|</span>
+            <?php endif; ?>
+
+            <?php if (!empty($imprint_url)): ?>
                 <a href="<?= e($imprint_url) ?>" target="_blank"><?= lang('imprint') ?></a>
             <?php endif; ?>
         </span>
