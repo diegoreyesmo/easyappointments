@@ -37,6 +37,7 @@ class Notifications
         $this->CI->load->model('providers_model');
         $this->CI->load->model('secretaries_model');
         $this->CI->load->model('settings_model');
+        $this->CI->load->model('email_queue_model');
 
         $this->CI->load->library('email_messages');
         $this->CI->load->library('ics_file');
@@ -61,6 +62,45 @@ class Notifications
         array $settings,
         bool $manage_mode = false,
     ): void {
+        if (filter_var(setting('email_queue_enabled'), FILTER_VALIDATE_BOOLEAN)) {
+            try {
+                $appointment_id = (int) ($appointment['id'] ?? 0);
+                if ($appointment_id === 0) {
+                    return;
+                }
+
+                if (!empty($customer['email']) && filter_var(setting('customer_notifications'), FILTER_VALIDATE_BOOLEAN)) {
+                    $this->CI->email_queue_model->add_to_queue('appointment_saved', $appointment_id, 'customer', $customer['email']);
+                }
+
+                if (filter_var($this->CI->providers_model->get_setting($provider['id'], 'notifications'), FILTER_VALIDATE_BOOLEAN)) {
+                    $this->CI->email_queue_model->add_to_queue('appointment_saved', $appointment_id, 'provider', $provider['email']);
+                }
+
+                $admins = $this->CI->admins_model->get();
+                foreach ($admins as $admin) {
+                    if ($admin['settings']['notifications'] === '0') {
+                        continue;
+                    }
+                    $this->CI->email_queue_model->add_to_queue('appointment_saved', $appointment_id, 'admin', $admin['email']);
+                }
+
+                $secretaries = $this->CI->secretaries_model->get();
+                foreach ($secretaries as $secretary) {
+                    if ($secretary['settings']['notifications'] === '0') {
+                        continue;
+                    }
+                    if (!in_array($provider['id'], $secretary['providers'])) {
+                        continue;
+                    }
+                    $this->CI->email_queue_model->add_to_queue('appointment_saved', $appointment_id, 'secretary', $secretary['email']);
+                }
+            } catch (Throwable $e) {
+                $this->log_exception($e, 'appointment-saved queueing', $appointment['id'] ?? null);
+            }
+            return;
+        }
+
         try {
             $current_language = config('language');
 
@@ -222,6 +262,45 @@ class Notifications
         array $settings,
         string $cancellation_reason = '',
     ): void {
+        if (filter_var(setting('email_queue_enabled'), FILTER_VALIDATE_BOOLEAN)) {
+            try {
+                $appointment_id = (int) ($appointment['id'] ?? 0);
+                if ($appointment_id === 0) {
+                    return;
+                }
+
+                if (filter_var($this->CI->providers_model->get_setting($provider['id'], 'notifications'), FILTER_VALIDATE_BOOLEAN)) {
+                    $this->CI->email_queue_model->add_to_queue('appointment_deleted', $appointment_id, 'provider', $provider['email']);
+                }
+
+                if (!empty($customer['email']) && filter_var(setting('customer_notifications'), FILTER_VALIDATE_BOOLEAN)) {
+                    $this->CI->email_queue_model->add_to_queue('appointment_deleted', $appointment_id, 'customer', $customer['email']);
+                }
+
+                $admins = $this->CI->admins_model->get();
+                foreach ($admins as $admin) {
+                    if ($admin['settings']['notifications'] === '0') {
+                        continue;
+                    }
+                    $this->CI->email_queue_model->add_to_queue('appointment_deleted', $appointment_id, 'admin', $admin['email']);
+                }
+
+                $secretaries = $this->CI->secretaries_model->get();
+                foreach ($secretaries as $secretary) {
+                    if ($secretary['settings']['notifications'] === '0') {
+                        continue;
+                    }
+                    if (!in_array($provider['id'], $secretary['providers'])) {
+                        continue;
+                    }
+                    $this->CI->email_queue_model->add_to_queue('appointment_deleted', $appointment_id, 'secretary', $secretary['email']);
+                }
+            } catch (Throwable $e) {
+                $this->log_exception($e, 'appointment-deleted queueing', $appointment['id'] ?? null);
+            }
+            return;
+        }
+
         try {
             $current_language = config('language');
 

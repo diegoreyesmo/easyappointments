@@ -38,14 +38,129 @@ class Console extends EA_Controller
 
         $this->load->library('instance');
         $this->load->library('cleanup');
+        $this->load->library('email_messages');
+        $this->load->library('ics_file');
 
         $this->load->model('admins_model');
         $this->load->model('customers_model');
         $this->load->model('providers_model');
         $this->load->model('services_model');
         $this->load->model('settings_model');
+        $this->load->model('email_queue_model');
+        $this->load->model('appointments_model');
+        
+        
     }
 
+     /**
+     * Process pending email queue jobs.
+     *
+     * Usage: php index.php cli email_worker process
+     */
+    public function process(): void
+    {
+        $limit = 50;
+        $max_attempts = 3;
+        $jobs = $this->email_queue_model->get_pending_jobs($limit);
+
+        if (empty($jobs)) {
+            echo "No pending jobs found.\n";
+            return;
+        }
+
+        echo "Processing " . count($jobs) . " pending job(s)...\n";
+
+        foreach ($jobs as $job) {
+            $job_id = (int) $job['id'];
+            $appointment_id = (int) $job['appointment_id'];
+            $notification_type = $job['notification_type'];
+            $recipient_type = $job['recipient_type'];
+            $recipient_email = $job['recipient_email'];
+
+            if ((int) $job['attempts'] >= $max_attempts) {
+                echo "Job {$job_id} exceeded max attempts ({$max_attempts}). Marking as failed.\n";
+                $this->email_queue_model->mark_as_failed($job_id, 'Max attempts exceeded');
+                continue;
+            }
+
+            try {
+                $appointment = $this->appointments_model->find($appointment_id);
+                $provider = $this->providers_model->find($appointment['id_users_provider']);
+                $service = $this->services_model->find($appointment['id_services']);
+                $customer = $this->customers_model->find($appointment['id_users_customer']);
+                $settings = $this->settings_model->get();
+
+                $settings_array = [];
+                foreach ($settings as $setting) {
+                    $settings_array[$setting['name']] = $setting['value'];
+                }
+
+                if ($notification_type === 'appointment_saved') {
+                    $manage_mode = false;
+                    $customer_link = site_url('booking/reschedule/' . $appointment['hash']);
+                    $provider_link = site_url('calendar/reschedule/' . $appointment['hash']);
+                    $ics_stream = $this->ics_file->get_stream($appointment, $service, $provider, $customer);
+
+                    if ($recipient_type === 'customer') {
+                        $subject = lang('appointment_booked');
+                        $message = lang('thank_you_for_appointment');
+                        $this->email_messages->send_appointment_saved(
+                            $appointment,
+                            $provider,
+                            $service,
+                            $customer,
+                            $settings_array,
+                            $subject,
+                            $message,
+                            $customer_link,
+                            $recipient_email,
+                            $ics_stream,
+                            $customer['timezone'] ?? null
+                        );
+                    } else {
+                        $subject = lang('appointment_added_to_your_plan');
+                        $message = lang('appointment_link_description');
+                        $this->email_messages->send_appointment_saved(
+                            $appointment,
+                            $provider,
+                            $service,
+                            $customer,
+                            $settings_array,
+                            $subject,
+                            $message,
+                            $provider_link,
+                            $recipient_email,
+                            $ics_stream,
+                            $provider['timezone'] ?? null
+                        );
+                    }
+                } elseif ($notification_type === 'appointment_deleted') {
+                    $this->email_messages->send_appointment_deleted(
+                        $appointment,
+                        $provider,
+                        $service,
+                        $customer,
+                        $settings_array,
+                        $recipient_email,
+                        '',
+                        $provider['timezone'] ?? null
+                    );
+                } else {
+                    throw new RuntimeException("Unknown notification type: {$notification_type}");
+                }
+
+                $this->email_queue_model->mark_as_sent($job_id);
+                echo "Job {$job_id} sent successfully to {$recipient_email}.\n";
+            } catch (Throwable $e) {
+                $error_message = $e->getMessage();
+                $this->email_queue_model->mark_as_failed($job_id, $error_message);
+                echo "Job {$job_id} failed: {$error_message}\n";
+            }
+        }
+
+        echo "Processing complete.\n";
+    }
+    
     /**
      * Perform a console installation.
      *
