@@ -5,17 +5,17 @@
 // @link https://codeigniter.com/user_guide/libraries/email.html
 
 $config['useragent'] = 'Easy!Appointments';
-$config['protocol'] = 'mail'; // or 'smtp'
-$config['mailtype'] = 'html'; // or 'text'
-// $config['smtp_debug'] = '0'; // or '1'
-// $config['smtp_auth'] = TRUE; //or FALSE for anonymous relay.
-// $config['smtp_host'] = '';
-// $config['smtp_user'] = '';
-// $config['smtp_pass'] = '';
-// $config['smtp_crypto'] = 'ssl'; // or 'tls'
-// $config['smtp_port'] = 25;
-// $config['from_name'] = '';
-// $config['from_address'] = '';
-// $config['reply_to'] = '';
+$config['protocol'] = 'smtp';
+$config['mailtype'] = 'html';
+$config['smtp_debug'] = '0';
+$config['smtp_host'] = getenv('SMTP_HOST') ?: 'localhost';
+$config['smtp_user'] = getenv('SMTP_USER') ?: '';
+$config['smtp_pass'] = getenv('SMTP_PASS') ?: '';
+$config['smtp_port'] = getenv('SMTP_PORT') ?: 1025;
+$config['smtp_crypto'] = getenv('SMTP_CRYPTO') ?: 'tls';
+$config['smtp_auth'] = filter_var(getenv('SMTP_AUTH') ?: 'true', FILTER_VALIDATE_BOOLEAN);
+$config['from_name'] = getenv('FROM_NAME') ?: 'Easy!Appointments';
+$config['from_address'] = getenv('FROM_ADDRESS') ?: 'no-reply@example.com';
+$config['reply_to'] = getenv('REPLY_TO') ?: $config['from_address'];
 $config['crlf'] = "\r\n";
 $config['newline'] = "\r\n";
