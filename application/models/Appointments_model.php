@@ -61,13 +61,26 @@ class Appointments_model extends EA_Model
      */
     public function save(array $appointment): int
     {
+        $total_start = microtime(true);
+        
+        $validate_start = microtime(true);
         $this->validate($appointment);
+        $validate_duration = round((microtime(true) - $validate_start) * 1000, 2);
+        log_message('debug', '[PERF] Appointment Creation - Validation took ' . $validate_duration . 'ms');
 
+        $db_start = microtime(true);
         if (empty($appointment['id'])) {
-            return $this->insert($appointment);
+            $result = $this->insert($appointment);
         } else {
-            return $this->update($appointment);
+            $result = $this->update($appointment);
         }
+        $db_duration = round((microtime(true) - $db_start) * 1000, 2);
+        log_message('debug', '[PERF] Appointment Creation - Insert/Update DB query took ' . $db_duration . 'ms');
+        
+        $total_duration = round((microtime(true) - $total_start) * 1000, 2);
+        log_message('debug', '[PERF] Appointment Creation - Total save method took ' . $total_duration . 'ms');
+        
+        return $result;
     }
 
     /**

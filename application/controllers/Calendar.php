@@ -264,6 +264,7 @@ class Calendar extends EA_Controller
      */
     public function save_appointment(): void
     {
+        $total_start = microtime(true);
         try {
             method('post');
 
@@ -284,6 +285,7 @@ class Calendar extends EA_Controller
 
             // Save customer changes to the database.
             if ($customer_data) {
+                $customer_start = microtime(true);
                 $customer = $customer_data;
 
                 $required_permissions = !empty($customer['id'])
@@ -304,6 +306,8 @@ class Calendar extends EA_Controller
                 }
 
                 $customer['id'] = $this->customers_model->save($customer);
+                $customer_duration = round((microtime(true) - $customer_start) * 1000, 2);
+                log_message('debug', '[PERF] Appointment Creation - Customer save/update took ' . $customer_duration . 'ms');
             }
 
             // Save appointment changes to the database.
@@ -329,12 +333,15 @@ class Calendar extends EA_Controller
                 // Check if the provider has a conflicting appointment at the selected time
                 $exclude_appointment_id = !empty($appointment['id']) ? (int) $appointment['id'] : null;
 
+                $conflict_start = microtime(true);
                 $has_conflict = $this->appointments_model->has_provider_conflict(
                     (int) $appointment['id_users_provider'],
                     $appointment['start_datetime'],
                     $appointment['end_datetime'],
                     $exclude_appointment_id,
                 );
+                $conflict_duration = round((microtime(true) - $conflict_start) * 1000, 2);
+                log_message('debug', '[PERF] Appointment Creation - Provider conflict check took ' . $conflict_duration . 'ms');
 
                 if ($has_conflict && !$force_save) {
                     json_response([
@@ -354,11 +361,14 @@ class Calendar extends EA_Controller
                     $appointment['meeting_link'] = $this->jitsi_client->generate_link();
                 }
 
+                $appointment_start = microtime(true);
                 $this->appointments_model->only($appointment, $this->allowed_appointment_fields);
 
                 $this->appointments_model->optional($appointment, $this->optional_appointment_fields);
 
                 $appointment['id'] = $this->appointments_model->save($appointment);
+                $appointment_duration = round((microtime(true) - $appointment_start) * 1000, 2);
+                log_message('debug', '[PERF] Appointment Creation - Appointment DB save took ' . $appointment_duration . 'ms');
             }
 
             if (empty($appointment['id'])) {
@@ -382,9 +392,13 @@ class Calendar extends EA_Controller
                 'time_format' => setting('time_format'),
             ];
 
+            $sync_start = microtime(true);
             $this->synchronization->sync_appointment_saved($appointment, $service, $provider, $customer, $settings);
+            $sync_duration = round((microtime(true) - $sync_start) * 1000, 2);
+            log_message('debug', '[PERF] Appointment Creation - Synchronization took ' . $sync_duration . 'ms');
 
             if ($notify_users) {
+                $notify_start = microtime(true);
                 $this->notifications->notify_appointment_saved(
                     $appointment,
                     $service,
@@ -393,14 +407,24 @@ class Calendar extends EA_Controller
                     $settings,
                     $manage_mode,
                 );
+                $notify_duration = round((microtime(true) - $notify_start) * 1000, 2);
+                log_message('debug', '[PERF] Appointment Creation - Email notifications took ' . $notify_duration . 'ms');
             }
 
+            $webhook_start = microtime(true);
             $this->webhooks_client->trigger(WEBHOOK_APPOINTMENT_SAVE, $appointment);
+            $webhook_duration = round((microtime(true) - $webhook_start) * 1000, 2);
+            log_message('debug', '[PERF] Appointment Creation - Webhooks trigger took ' . $webhook_duration . 'ms');
+
+            $total_duration = round((microtime(true) - $total_start) * 1000, 2);
+            log_message('debug', '[PERF] Appointment Creation - Total save_appointment took ' . $total_duration . 'ms');
 
             json_response([
                 'success' => true,
             ]);
         } catch (Throwable $e) {
+            $total_duration = round((microtime(true) - $total_start) * 1000, 2);
+            log_message('debug', '[PERF] Appointment Creation - Total save_appointment failed after ' . $total_duration . 'ms');
             json_exception($e);
         }
     }

@@ -207,6 +207,7 @@ class Appointments_api_v1 extends EA_Controller
      */
     public function store(): void
     {
+        $total_start = microtime(true);
         try {
             $appointment = request();
 
@@ -220,16 +221,27 @@ class Appointments_api_v1 extends EA_Controller
                 $appointment['end_datetime'] = $this->appointments_model->calculate_end_datetime($appointment);
             }
 
+            $appointment_start = microtime(true);
             $appointment_id = $this->appointments_model->save($appointment);
+            $appointment_duration = round((microtime(true) - $appointment_start) * 1000, 2);
+            log_message('debug', '[PERF] Appointment Creation - Appointment DB save took ' . $appointment_duration . 'ms');
 
             $created_appointment = $this->appointments_model->find($appointment_id);
 
+            $notify_sync_start = microtime(true);
             $this->notify_and_sync_appointment($created_appointment);
+            $notify_sync_duration = round((microtime(true) - $notify_sync_start) * 1000, 2);
+            log_message('debug', '[PERF] Appointment Creation - Notify and sync took ' . $notify_sync_duration . 'ms');
 
             $this->appointments_model->api_encode($created_appointment);
 
+            $total_duration = round((microtime(true) - $total_start) * 1000, 2);
+            log_message('debug', '[PERF] Appointment Creation - Total store took ' . $total_duration . 'ms');
+
             json_response($created_appointment, 201);
         } catch (Throwable $e) {
+            $total_duration = round((microtime(true) - $total_start) * 1000, 2);
+            log_message('debug', '[PERF] Appointment Creation - Total store failed after ' . $total_duration . 'ms');
             json_exception($e);
         }
     }

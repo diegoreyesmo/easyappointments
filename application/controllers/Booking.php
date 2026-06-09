@@ -367,10 +367,12 @@ class Booking extends EA_Controller
      */
     public function register(): void
     {
+        $total_start = microtime(true);
         try {
             method('post');
 
             // Verify CSRF token for booking submissions
+            $captcha_start = microtime(true);
             $this->verify_csrf_token();
 
             $disable_booking = setting('disable_booking');
@@ -436,7 +438,10 @@ class Booking extends EA_Controller
             }
 
             // Check appointment availability before registering it to the database.
+            $availability_start = microtime(true);
             $appointment['id_users_provider'] = $this->check_datetime_availability();
+            $availability_duration = round((microtime(true) - $availability_start) * 1000, 2);
+            log_message('debug', '[PERF] Appointment Creation - Availability check took ' . $availability_duration . 'ms');
 
             if (!$appointment['id_users_provider']) {
                 throw new RuntimeException(lang('requested_hour_is_unavailable'));
@@ -477,6 +482,8 @@ class Booking extends EA_Controller
                     }
                 }
             }
+            $captcha_duration = round((microtime(true) - $captcha_start) * 1000, 2);
+            log_message('debug', '[PERF] Appointment Creation - CSRF & CAPTCHA validation took ' . $captcha_duration . 'ms');
 
             if ($this->customers_model->exists($customer)) {
                 $customer['id'] = $this->customers_model->find_record_id($customer);
@@ -533,8 +540,11 @@ class Booking extends EA_Controller
 
             $this->customers_model->only($customer, $this->allowed_customer_fields);
 
+            $customer_start = microtime(true);
             $customer_id = $this->customers_model->save($customer);
             $customer = $this->customers_model->find($customer_id);
+            $customer_duration = round((microtime(true) - $customer_start) * 1000, 2);
+            log_message('debug', '[PERF] Appointment Creation - Customer DB save took ' . $customer_duration . 'ms');
 
             $appointment['id_users_customer'] = $customer_id;
             $appointment['is_unavailability'] = false;
@@ -547,8 +557,11 @@ class Booking extends EA_Controller
 
             $this->appointments_model->only($appointment, $this->allowed_appointment_fields);
 
+            $appointment_start = microtime(true);
             $appointment_id = $this->appointments_model->save($appointment);
             $appointment = $this->appointments_model->find($appointment_id);
+            $appointment_duration = round((microtime(true) - $appointment_start) * 1000, 2);
+            log_message('debug', '[PERF] Appointment Creation - Appointment DB save took ' . $appointment_duration . 'ms');
 
             $company_color = setting('company_color');
 
@@ -562,8 +575,12 @@ class Booking extends EA_Controller
                 'time_format' => setting('time_format'),
             ];
 
+            $sync_start = microtime(true);
             $this->synchronization->sync_appointment_saved($appointment, $service, $provider, $customer, $settings);
+            $sync_duration = round((microtime(true) - $sync_start) * 1000, 2);
+            log_message('debug', '[PERF] Appointment Creation - Synchronization took ' . $sync_duration . 'ms');
 
+            $notify_start = microtime(true);
             $this->notifications->notify_appointment_saved(
                 $appointment,
                 $service,
@@ -572,8 +589,16 @@ class Booking extends EA_Controller
                 $settings,
                 $manage_mode,
             );
+            $notify_duration = round((microtime(true) - $notify_start) * 1000, 2);
+            log_message('debug', '[PERF] Appointment Creation - Email notifications took ' . $notify_duration . 'ms');
 
+            $webhook_start = microtime(true);
             $this->webhooks_client->trigger(WEBHOOK_APPOINTMENT_SAVE, $appointment);
+            $webhook_duration = round((microtime(true) - $webhook_start) * 1000, 2);
+            log_message('debug', '[PERF] Appointment Creation - Webhooks trigger took ' . $webhook_duration . 'ms');
+
+            $total_duration = round((microtime(true) - $total_start) * 1000, 2);
+            log_message('debug', '[PERF] Appointment Creation - Total register took ' . $total_duration . 'ms');
 
             $response = [
                 'appointment_id' => $appointment['id'],
@@ -582,6 +607,8 @@ class Booking extends EA_Controller
 
             json_response($response);
         } catch (Throwable $e) {
+            $total_duration = round((microtime(true) - $total_start) * 1000, 2);
+            log_message('debug', '[PERF] Appointment Creation - Total register failed after ' . $total_duration . 'ms');
             json_exception($e);
         }
     }
