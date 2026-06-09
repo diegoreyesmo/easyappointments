@@ -71,12 +71,6 @@
 
     <?= $message ?>
 
-    <p>
-        <small>
-            Powered by
-            <a href="https://easyappointments.org">Easy!Appointments</a>
-        </small>
-    </p>
 </div>
 </body>
 </html>

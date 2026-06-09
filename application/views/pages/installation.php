@@ -202,7 +202,6 @@
     <div class="container">
         <div class="row">
             <div class="col-lg-9 offset-lg-1 py-3">
-                Powered by <a href="https://easyappointments.org">Easy!Appointments</a>        
             </div>
         </div>
     </div>
