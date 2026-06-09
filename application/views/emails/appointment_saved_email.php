@@ -27,7 +27,7 @@ $customer_address = trim((string) ($customer['address'] ?? ''));
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <title>
-        <?= lang('appointment_details_title') ?> | Easy!Appointments
+        <?= lang('appointment_details_title') ?> | AgendaRRF
     </title>
     <style>
         /* -------------------------------------
@@ -615,7 +615,7 @@ $customer_address = trim((string) ($customer['address'] ?? ''));
                                                                     <td>
                                                                         <a href="<?= e(
                                                                             $appointment_link,
-                                                                        ) ?>" target="_blank">Reschedule / Cancel Appointment</a>
+                                                                        ) ?>" target="_blank">Reagendar / Cancelar cita</a>
                                                                     </td>
                                                                 </tr>
                                                             </tbody>

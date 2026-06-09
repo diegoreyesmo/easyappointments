@@ -1,7 +1,7 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed');
 
 /* ----------------------------------------------------------------------------
- * Easy!Appointments - Online Appointment Scheduler
+ * AgendaRRF - Online Appointment Scheduler
  *
  * @package     EasyAppointments
  * @author      A.Tselegidis <alextselegidis@gmail.com>
@@ -84,7 +84,7 @@ class About extends EA_Controller
     }
 
     /**
-     * Fetch blog posts from the Easy!Appointments RSS feed.
+     * Fetch blog posts from the AgendaRRF RSS feed.
      *
      * @return array
      */
@@ -98,7 +98,7 @@ class About extends EA_Controller
             $context = stream_context_create([
                 'http' => [
                     'timeout' => 5,
-                    'user_agent' => 'Easy!Appointments/' . config('version'),
+                    'user_agent' => 'AgendaRRF/' . config('version'),
                 ],
                 'ssl' => [
                     'verify_peer' => true,

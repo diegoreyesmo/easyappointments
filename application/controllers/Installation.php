@@ -1,7 +1,7 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed');
 
 /* ----------------------------------------------------------------------------
- * Easy!Appointments - Online Appointment Scheduler
+ * AgendaRRF - Online Appointment Scheduler
  *
  * @package     EasyAppointments
  * @author      A.Tselegidis <alextselegidis@gmail.com>
@@ -54,7 +54,7 @@ class Installation extends EA_Controller
     }
 
     /**
-     * Installs Easy!Appointments on the server.
+     * Installs AgendaRRF on the server.
      */
     public function perform(): void
     {

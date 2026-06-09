@@ -1,7 +1,7 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed');
 
 /* ----------------------------------------------------------------------------
- * Easy!Appointments - Online Appointment Scheduler
+ * AgendaRRF - Online Appointment Scheduler
  *
  * @package     EasyAppointments
  * @author      A.Tselegidis <alextselegidis@gmail.com>
@@ -101,7 +101,7 @@ class Google_sync
 
         $this->client = new Google_Client();
         $this->client->setHttpClient($http);
-        $this->client->setApplicationName('Easy!Appointments');
+        $this->client->setApplicationName('AgendaRRF');
         $this->client->setClientId($this->get_client_id());
         $this->client->setClientSecret($this->get_client_secret());
         $this->client->setRedirectUri(site_url('google/oauth_callback'));
@@ -116,7 +116,7 @@ class Google_sync
      * Get Google OAuth authorization url.
      *
      * This url must be used to redirect the user to the Google user consent page,
-     * where the user grants access to his data for the Easy!Appointments app.
+     * where the user grants access to his data for the AgendaRRF app.
      *
      * @param string|null $state Optional state parameter for CSRF protection.
      */
@@ -163,7 +163,7 @@ class Google_sync
      *
      * This method must be executed every time we need to make actions on a provider's Google Calendar account. A new
      * token is necessary and the only way to get it is to use the stored refresh token that was provided when the
-     * provider granted consent to Easy!Appointments for use his Google Calendar account.
+     * provider granted consent to AgendaRRF for use his Google Calendar account.
      *
      * @param string $refresh_token The provider's refresh token. This value is stored in the database and used every
      * time we need to make actions to his Google Calendar account.
@@ -178,7 +178,7 @@ class Google_sync
     /**
      * Add an appointment record to its providers Google Calendar account.
      *
-     * This method checks whether the appointment's provider has enabled the Google Sync utility of Easy!Appointments
+     * This method checks whether the appointment's provider has enabled the Google Sync utility of AgendaRRF
      * and the stored access token is still valid. If yes, the selected appointment record is going to be added to the
      * Google Calendar account.
      *
@@ -268,7 +268,7 @@ class Google_sync
      * Update an existing appointment that is already synced with Google Calendar.
      *
      * This method updates the Google Calendar event item that is connected with the provided appointment record of
-     * Easy!Appointments.
+     * AgendaRRF.
      *
      * @param array $appointment Appointment data.
      * @param array $provider Provider data.

@@ -1,7 +1,7 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed');
 
 /* ----------------------------------------------------------------------------
- * Easy!Appointments - Online Appointment Scheduler
+ * AgendaRRF - Online Appointment Scheduler
  *
  * @package     EasyAppointments
  * @author      A.Tselegidis <alextselegidis@gmail.com>
@@ -35,7 +35,7 @@ class Google extends EA_Controller
     }
 
     /**
-     * Complete synchronization of appointments between Google Calendar and Easy!Appointments.
+     * Complete synchronization of appointments between Google Calendar and AgendaRRF.
      *
      * This method will completely sync the appointments of a provider with his Google Calendar account. The sync period
      * needs to be relatively small, because a lot of API calls might be necessary and this will lead to consuming the
@@ -244,10 +244,10 @@ class Google extends EA_Controller
                     $google_event = $CI->google_sync->get_event($provider, $local_event['id_google_calendar']);
 
                     if ($google_event->getStatus() == 'cancelled') {
-                        throw new Exception('Event is cancelled, remove the record from Easy!Appointments.');
+                        throw new Exception('Event is cancelled, remove the record from AgendaRRF.');
                     }
 
-                    // If Google Calendar event is different from Easy!Appointments appointment then update Easy!Appointments record.
+                    // If Google Calendar event is different from AgendaRRF appointment then update AgendaRRF record.
                     // Both sides must be evaluated in the provider's timezone to get consistent timestamps.
                     // Local datetimes are stored as timezone-naive strings in the provider's timezone, so
                     // wrap them with the provider timezone before calling getTimestamp().
@@ -303,14 +303,14 @@ class Google extends EA_Controller
                         $events_model->save($local_event);
                     }
                 } catch (Throwable) {
-                    // Appointment not found on Google Calendar, delete from Easy!Appointments.
+                    // Appointment not found on Google Calendar, delete from AgendaRRF.
                     $events_model->delete($local_event['id']);
 
                     $local_event['id_google_calendar'] = null;
                 }
             }
 
-            // Add Google Calendar events that do not exist in Easy!Appointments.
+            // Add Google Calendar events that do not exist in AgendaRRF.
             $google_calendar = $provider['settings']['google_calendar'];
 
             try {
@@ -386,7 +386,7 @@ class Google extends EA_Controller
                         ? (string) $google_event->getDescription()
                         : trim($google_event_summary . ' ' . $google_event->getDescription());
 
-                // Record doesn't exist in the Easy!Appointments, so add the event now.
+                // Record doesn't exist in the AgendaRRF, so add the event now.
                 $local_event = [
                     'start_datetime' => $google_event_start->format('Y-m-d H:i:s'),
                     'end_datetime' => $google_event_end->format('Y-m-d H:i:s'),
@@ -474,8 +474,8 @@ class Google extends EA_Controller
      * tokens in the future.
      *
      * IMPORTANT: Because it is necessary to authorize the application using the web server flow (see official
-     * documentation of OAuth), every Easy!Appointments installation should use its own calendar api key. So in every
-     * api console account, the "http://path-to-Easy!Appointments/google/oauth_callback" should be included in an
+     * documentation of OAuth), every AgendaRRF installation should use its own calendar api key. So in every
+     * api console account, the "http://path-to-AgendaRRF/google/oauth_callback" should be included in an
      * allowed redirect URL.
      *
      * @throws Exception
