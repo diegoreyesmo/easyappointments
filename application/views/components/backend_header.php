@@ -12,8 +12,8 @@
         <img src="<?= base_url(
             'assets/img/logo.png',
         ) ?>" alt="logo" class="float-start me-2" style="width: 45px; height: 45px;">
-        <h6 class="mb-1 mt-1 fw-bold text-white" style="font-size: 15px;">EASY!APPOINTMENTS</h6>
-        <small class="d-block text-white-50" style="font-size: 12px;">Online Appointment Scheduler</small>
+        <h6 class="mb-1 mt-1 fw-bold text-white" style="font-size: 15px;">AGENDA RRF</h6>
+        <small class="d-block text-white-50" style="font-size: 12px;">Sistema de Agendamento</small>
     </div>
 
     <button type="button" class="navbar-toggler me-1" data-bs-toggle="collapse" data-bs-target="#header-menu">
