@@ -37,6 +37,8 @@ class Alumnos extends EA_Controller
         'id_roles',
         'is_approved',
         'settings',
+        'allowed_services',
+        'allowed_providers',
     ];
 
     public array $optional_alumno_fields = [
