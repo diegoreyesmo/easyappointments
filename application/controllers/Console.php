@@ -148,7 +148,7 @@ class Console extends EA_Controller
                         $customer,
                         $settings_array,
                         $recipient_email,
-                        '',
+                        $appointment['cancellation_reason'] ?? '',
                         $provider['timezone'] ?? null
                     );
                 } else {
