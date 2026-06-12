@@ -647,6 +647,13 @@ $customer_address = trim((string) ($customer['address'] ?? ''));
                                 </a>
                             </td>
                         </tr>
+                        <?php if (!empty($settings['company_address'])): ?>
+                            <tr>
+                                <td class="content-block powered-by" style="padding-top: 5px;">
+                                    <?= e($settings['company_address']) ?>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
                     </table>
                 </div>
                 <!-- END FOOTER -->
