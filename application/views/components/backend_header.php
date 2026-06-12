@@ -81,6 +81,9 @@
                     <a class="dropdown-item" href="<?= site_url('admins') ?>">
                         <?= lang('admins') ?>
                     </a>
+                    <a class="dropdown-item" href="<?= site_url('alumnos') ?>">
+                        <?= lang('alumnos') ?>
+                    </a>
                 </div>
             </li>
 

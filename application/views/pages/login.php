@@ -73,6 +73,13 @@
             <?= lang('forgot_your_password') ?>
         </a>
     </div>
+
+    <div class="text-center mt-3">
+        <a href="<?= site_url('booking/register_alumno') ?>" class="text-decoration-none small text-primary">
+            <i class="fas fa-user-graduate me-1"></i>
+            <?= lang('register_as_student') ?>
+        </a>
+    </div>
 </form>
 <?php end_section('content'); ?>
 

@@ -77,22 +77,40 @@ Este plan detalla los cambios necesarios para introducir un nuevo tipo de usuari
 
 ## 4. Cambios en el Frontend (Vistas y JavaScript)
 
-### 4.1. Formulario de Registro Público de Alumno
-- Crear una nueva vista y ruta independiente (ej. `/booking/register_alumno`) que:
-  - Establezca automáticamente el `id_roles` al ID del rol "alumno".
-  - Establezca `is_approved = 0` por defecto.
-  - Solicite los datos básicos (nombre, email, teléfono, username, contraseña).
-  - Redirija a una página de confirmación indicando que la cuenta está pendiente de aprobación por un administrador.
+*Nota arquitectónica:* El sistema no posee una vista genérica de "usuarios" (`user_form.php`), sino vistas dedicadas por rol (`admins.php`, `providers.php`, `secretaries.php`, `customers.php`). Por consistencia, se creará una vista dedicada para la gestión de alumnos.
 
-### 4.2. Panel de Administración / Secretaría (Formulario de Usuario Existente)
-- Modificar la vista de edición de usuario existente (`user_form.php` o similar) para mostrar campos condicionales **solo cuando el rol seleccionado sea "alumno"**:
-  - Un checkbox o interruptor para "Cuenta Aprobada" (`is_approved`).
-  - Un campo numérico para "Límite de Citas (Cuota)" (`appointment_quota`).
-  - Selectores múltiples (o interfaz de lista) para asignar Servicios y Profesionales permitidos, guardando en las tablas `ea_alumnos_services` y `ea_alumnos_providers`.
+### 4.1. Vista de Gestión de Alumnos (Nueva)
+- Crear `application/views/pages/alumnos.php` siguiendo el patrón de `providers.php` o `secretaries.php`.
+- Incluir campos condicionales en el formulario de detalles:
+  - Checkbox "Cuenta Aprobada" (`is_approved`).
+  - Input numérico "Límite de Citas (Cuota)" (`appointment_quota`).
+  - Selector múltiple (Select2) para "Servicios Permitidos" (poblado desde la API de servicios).
+  - Selector múltiple (Select2) para "Profesionales Permitidos" (poblado desde la API de proveedores).
+- Crear `assets/js/pages/alumnos.js` para la lógica de UI (filtrado, validación, guardado, manejo de selectores múltiples).
+- Crear `assets/js/http/alumnos_http_client.js` para las llamadas a la API (asumiendo endpoint `/api/v1/alumnos` o extensión del endpoint de usuarios existente).
 
-### 4.3. Vista del Calendario del Alumno
-- Asegurar que la interfaz del calendario (`calendar.php` o vista específica) no muestre opciones de administración global.
-- El cliente HTTP (`appointments_http_client.js`) ya debería filtrar correctamente si el backend lo restringe, pero se puede añadir una validación adicional en el frontend para ocultar botones de acción no permitidos.
+### 4.2. Actualización del Menú de Navegación
+- Modificar `application/views/components/backend_header.php`.
+- Añadir un enlace "Alumnos" en el menú desplegable de "Usuarios" (junto a Proveedores, Secretarios y Administradores), protegido por la verificación de permisos adecuada (ej. `can('view', PRIV_USERS)`).
+
+### 4.3. Registro Público de Alumno
+- Crear `application/views/pages/register_alumno.php` con un formulario público que solicite: nombre, apellidos, email, teléfono, username y contraseña.
+- Añadir un enlace visible en `application/views/pages/login.php` (ej. "¿Eres alumno? Regístrate aquí") que apunte a esta nueva ruta (`booking/register_alumno`).
+- Añadir el método correspondiente en el controlador `Booking.php` (o un controlador dedicado) para procesar el registro, estableciendo automáticamente `id_roles` al ID del rol "alumno" y `is_approved = 0`.
+
+### 4.4. Vista del Calendario del Alumno
+- Asegurar que la interfaz del calendario (`calendar.php`) no muestre opciones de administración global cuando el rol sea "alumno".
+- El cliente HTTP (`appointments_http_client.js`) ya filtra correctamente si el backend lo restringe, pero se puede añadir validación adicional en el frontend para ocultar botones de acción no permitidos (ej. crear citas de otros usuarios).
+
+### 4.5. Actualización de Archivos de Idioma
+- Añadir las nuevas cadenas de texto necesarias en `application/language/spanish/translations_lang.php` (y otros idiomas si aplica):
+  - `alumnos`
+  - `account_approved` (Cuenta Aprobada)
+  - `appointment_quota` (Límite de Citas)
+  - `allowed_services` (Servicios Permitidos)
+  - `allowed_providers` (Profesionales Permitidos)
+  - `register_as_student` (Registrarse como alumno)
+  - `pending_approval_message` (Tu cuenta está pendiente de aprobación por un administrador).
 
 ---
 
@@ -114,7 +132,23 @@ Este plan detalla los cambios necesarios para introducir un nuevo tipo de usuari
 
 ---
 
-## 6. Consideraciones de Seguridad
+## 7. Próximos Pasos Inmediatos (Implementación Frontend)
+
+1. **Crear archivos base**: 
+   - `application/views/pages/alumnos.php`
+   - `assets/js/pages/alumnos.js`
+   - `assets/js/http/alumnos_http_client.js`
+2. **Actualizar menú**: Modificar `backend_header.php` para incluir el enlace a "Alumnos".
+3. **Crear registro público**: 
+   - `application/views/pages/register_alumno.php`
+   - Añadir enlace en `login.php`.
+   - Añadir ruta y método en `Booking.php` para procesar el registro.
+4. **Actualizar idiomas**: Añadir las cadenas de texto necesarias en `translations_lang.php`.
+5. **Verificar endpoint API**: Confirmar que el endpoint `/api/v1/alumnos` (o el equivalente) existe y acepta los campos `is_approved`, `appointment_quota`, `allowed_services` y `allowed_providers`. Si no existe, crear `Alumnos_api_v1.php` siguiendo el patrón de `Providers_api_v1.php`.
+
+---
+
+## 8. Consideraciones de Seguridad
 - Validar en el backend **siempre** las restricciones de cuota y asociación, nunca confiar solo en el filtrado del frontend.
 - Asegurar que los endpoints de administración para aprobar alumnos y asignar servicios verifiquen que el usuario que realiza la acción tenga rol de Administrador o Secretario.
 - Sanitizar todas las entradas en los nuevos formularios de registro y administración.

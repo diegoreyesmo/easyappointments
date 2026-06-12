@@ -577,4 +577,11 @@ $lang['about_app_premium'] = 'Ofrecemos servicios integrales para software autoa
 $lang['go_premium'] = 'Obtener Premium';
 $lang['notify_users_on_create_question'] = '¿Desea notificar al cliente sobre esta nueva cita?';
 $lang['notify_users_on_delete_question'] = '¿Desea notificar al cliente sobre la cancelación de la cita?';
+$lang['alumnos'] = 'Alumnos';
+$lang['account_approved'] = 'Cuenta Aprobada';
+$lang['appointment_quota'] = 'Límite de Citas';
+$lang['allowed_services'] = 'Servicios Permitidos';
+$lang['allowed_providers'] = 'Profesionales Permitidos';
+$lang['register_as_student'] = 'Registrarse como alumno';
+$lang['pending_approval_message'] = 'Tu cuenta está pendiente de aprobación por un administrador.';
 // End

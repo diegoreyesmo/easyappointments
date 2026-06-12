@@ -944,4 +944,140 @@ class Booking extends EA_Controller
 
         return $provider_list;
     }
+
+    /**
+     * Render the public alumno registration page.
+     */
+    public function register_alumno(): void
+    {
+        method('get');
+
+        $company_name = setting('company_name');
+        $company_logo = setting('company_logo');
+        $company_color = setting('company_color');
+        $require_captcha = setting('require_captcha');
+        $altcha_enabled = setting('altcha_enabled');
+
+        html_vars([
+            'company_name' => $company_name,
+            'company_logo' => $company_logo,
+            'company_color' => $company_color === '#ffffff' ? '' : $company_color,
+            'require_captcha' => $require_captcha,
+            'altcha_enabled' => $altcha_enabled,
+        ]);
+
+        $this->load->view('pages/register_alumno');
+    }
+
+    /**
+     * Store a new alumno from public registration.
+     */
+    public function store_alumno(): void
+    {
+        try {
+            method('post');
+
+            $disable_booking = setting('disable_booking');
+
+            if ($disable_booking) {
+                abort(403);
+            }
+
+            check('first_name', 'string');
+            check('last_name', 'string');
+            check('email', 'string');
+            check('username', 'string');
+            check('password', 'string');
+            check('phone_number', 'string|null');
+            check('captcha', 'string|null');
+
+            $first_name = request('first_name');
+            $last_name = request('last_name');
+            $email = request('email');
+            $username = request('username');
+            $password = request('password');
+            $phone_number = request('phone_number', '');
+
+            $require_captcha = (bool) setting('require_captcha');
+
+            if ($require_captcha) {
+                $altcha_enabled = setting('altcha_enabled') === '1';
+
+                if ($altcha_enabled) {
+                    check('altcha_payload', 'string|null');
+                    $altcha_payload = request('altcha_payload');
+
+                    $this->load->library('altcha_client');
+
+                    if (!$this->altcha_client->verify($altcha_payload)) {
+                        json_response([
+                            'altcha_verification' => false,
+                        ]);
+                        return;
+                    }
+                } else {
+                    $captcha_phrase = session('captcha_phrase');
+
+                    if (strtoupper($captcha_phrase) !== strtoupper(request('captcha'))) {
+                        json_response([
+                            'captcha_verification' => false,
+                        ]);
+                        return;
+                    }
+                }
+            }
+
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                throw new InvalidArgumentException(lang('invalid_email'));
+            }
+
+            if ($phone_number && !$this->is_valid_phone($phone_number)) {
+                throw new InvalidArgumentException(lang('invalid_phone'));
+            }
+
+            $role = $this->db->get_where('roles', ['slug' => 'alumno'])->row();
+
+            if (!$role) {
+                throw new RuntimeException('El rol de alumno no está configurado en el sistema.');
+            }
+
+            $alumno = [
+                'first_name' => $first_name,
+                'last_name' => $last_name,
+                'email' => $email,
+                'phone_number' => $phone_number,
+                'id_roles' => $role->id,
+                'is_approved' => 0,
+                'settings' => [
+                    'username' => $username,
+                    'password' => $password,
+                    'notifications' => 1,
+                ],
+            ];
+
+            $this->load->model('users_model');
+
+            $alumno_id = $this->users_model->save($alumno);
+
+            json_response([
+                'success' => true,
+                'message' => lang('pending_approval_message'),
+            ]);
+        } catch (Throwable $e) {
+            json_exception($e);
+        }
+    }
+
+    /**
+     * Validate phone number.
+     *
+     * @param string $phone
+     * @return bool
+     */
+    private function is_valid_phone(string $phone): bool
+    {
+        return preg_match('/^[0-9\-\+\(\)\s]+$/', $phone) && strlen($phone) >= 7;
+    }
+
+  
 }
