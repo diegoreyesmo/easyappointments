@@ -252,6 +252,10 @@ class Users_model extends EA_Model
     {
         $settings = $this->db->get_where('user_settings', ['id_users' => $user_id])->row_array();
 
+        if (!$settings) {
+            return [];
+        }
+
         unset($settings['id_users'], $settings['password'], $settings['salt']);
 
         return $settings;
