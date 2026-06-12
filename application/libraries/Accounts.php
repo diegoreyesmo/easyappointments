@@ -79,11 +79,11 @@ class Accounts
 
         $user = $this->CI->users_model->find($user_settings['id_users']);
 
-        if (empty($user['is_approved'])) {
+        $role = $this->CI->roles_model->find($user['id_roles']);
+
+        if ($role['slug'] === 'alumno' && empty($user['is_approved'])) {
             throw new RuntimeException('Cuenta pendiente de aprobación.');
         }
-
-        $role = $this->CI->roles_model->find($user['id_roles']);
 
         $default_timezone = $this->CI->timezones->get_default_timezone();
 
