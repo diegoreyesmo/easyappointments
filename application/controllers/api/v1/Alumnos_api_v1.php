@@ -129,8 +129,11 @@ class Alumnos_api_v1 extends EA_Controller
                 unset($alumno['id']);
             }
 
-            $role = $this->roles_model->find_record_id(['slug' => 'alumno']);
-            $alumno['id_roles'] = $role;
+            $roles = $this->roles_model->get(['slug' => 'alumno']);
+            if (empty($roles)) {
+                throw new RuntimeException('Role "alumno" not found.');
+            }
+            $alumno['id_roles'] = $roles[0]['id'];
 
             if (!array_key_exists('settings', $alumno)) {
                 throw new InvalidArgumentException('No settings property provided.');

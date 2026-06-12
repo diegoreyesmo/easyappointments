@@ -194,8 +194,11 @@ class Alumnos extends EA_Controller
 
             $alumno = request('alumno');
 
-            $role = $this->roles_model->find_record_id(['slug' => 'alumno']);
-            $alumno['id_roles'] = $role;
+            $roles = $this->roles_model->get(['slug' => 'alumno']);
+            if (empty($roles)) {
+                throw new RuntimeException('Role "alumno" not found.');
+            }
+            $alumno['id_roles'] = $roles[0]['id'];
 
             $this->users_model->only($alumno, $this->allowed_alumno_fields);
             $this->users_model->only($alumno['settings'], $this->allowed_alumno_setting_fields);
