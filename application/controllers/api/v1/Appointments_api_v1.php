@@ -360,7 +360,7 @@ class Appointments_api_v1 extends EA_Controller
                 'time_format' => setting('time_format'),
             ];
 
-            $this->appointments_model->delete($id);
+            $this->appointments_model->delete($id, '');
 
             $this->synchronization->sync_appointment_deleted($deleted_appointment, $provider);
 

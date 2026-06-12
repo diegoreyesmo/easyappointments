@@ -496,7 +496,7 @@ class Calendar extends EA_Controller
             ];
 
             // Delete appointment record from the database.
-            $this->appointments_model->delete($appointment_id);
+            $this->appointments_model->delete($appointment_id, $cancellation_reason);
 
             if ($notify_users) {
                 $this->notifications->notify_appointment_deleted(

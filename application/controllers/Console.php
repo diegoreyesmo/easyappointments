@@ -48,6 +48,7 @@ class Console extends EA_Controller
         $this->load->model('settings_model');
         $this->load->model('email_queue_model');
         $this->load->model('appointments_model');
+        $this->load->model('deleted_appointments_model');
         
         
     }
@@ -84,7 +85,12 @@ class Console extends EA_Controller
             }
 
             try {
-                $appointment = $this->appointments_model->find($appointment_id);
+                try {
+                    $appointment = $this->appointments_model->find($appointment_id);
+                } catch (InvalidArgumentException $e) {
+                    $appointment = $this->deleted_appointments_model->find($appointment_id);
+                }
+
                 $provider = $this->providers_model->find($appointment['id_users_provider']);
                 $service = $this->services_model->find($appointment['id_services']);
                 $customer = $this->customers_model->find($appointment['id_users_customer']);

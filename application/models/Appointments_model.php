@@ -363,11 +363,18 @@ class Appointments_model extends EA_Model
      * Remove an existing appointment from the database.
      *
      * @param int $appointment_id Appointment ID.
+     * @param string $cancellation_reason Optional cancellation reason.
+     * @param int|null $deleted_by Optional user ID who deleted the appointment.
      *
      * @throws RuntimeException
      */
-    public function delete(int $appointment_id): void
+    public function delete(int $appointment_id, string $cancellation_reason = '', ?int $deleted_by = null): void
     {
+        $appointment = $this->find($appointment_id);
+
+        $this->load->model('deleted_appointments_model');
+        $this->deleted_appointments_model->archive($appointment, $cancellation_reason, $deleted_by);
+
         $this->db->delete('appointments', ['id' => $appointment_id]);
     }
 
