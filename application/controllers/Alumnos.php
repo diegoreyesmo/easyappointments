@@ -35,24 +35,24 @@ class Alumnos extends EA_Controller
         'timezone',
         'language',
         'id_roles',
+        'is_approved',
         'settings',
     ];
 
     public array $optional_alumno_fields = [
         'allowed_services' => [],
         'allowed_providers' => [],
+        'is_approved' => 0,
     ];
 
     public array $allowed_alumno_setting_fields = [
         'username',
         'password',
         'notifications',
-        'is_approved',
         'appointment_quota',
     ];
 
     public array $optional_alumno_setting_fields = [
-        'is_approved' => 0,
         'appointment_quota' => 0,
     ];
 

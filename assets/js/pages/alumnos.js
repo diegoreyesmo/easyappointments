@@ -142,10 +142,10 @@ App.Pages.Alumnos = (function () {
                 notes: $notes.val(),
                 language: $language.val(),
                 timezone: $timezone.val(),
+                is_approved: Number($isApproved.prop('checked')),
                 settings: {
                     username: $username.val(),
                     notifications: Number($notifications.prop('checked')),
-                    is_approved: Number($isApproved.prop('checked')),
                     appointment_quota: $appointmentQuota.val() || 0,
                 },
             };
@@ -322,7 +322,7 @@ App.Pages.Alumnos = (function () {
 
         $username.val(alumno.settings.username);
         $notifications.prop('checked', Boolean(Number(alumno.settings.notifications)));
-        $isApproved.prop('checked', Boolean(Number(alumno.settings.is_approved)));
+        $isApproved.prop('checked', Boolean(Number(alumno.is_approved)));
         $appointmentQuota.val(alumno.settings.appointment_quota || '');
 
         $('#alumno-services a, #alumno-providers a').remove();
