@@ -154,19 +154,23 @@ class Appointments_model extends EA_Model
 
         if (!filter_var($appointment['is_unavailability'], FILTER_VALIDATE_BOOLEAN)) {
             // Make sure the customer ID really exists in the database.
-            $count = $this->db
-                ->select()
+            $customer = $this->db
+                ->select('users.id, roles.slug')
                 ->from('users')
                 ->join('roles', 'roles.id = users.id_roles', 'inner')
                 ->where('users.id', $appointment['id_users_customer'])
-                ->where('roles.slug', DB_SLUG_CUSTOMER)
                 ->get()
-                ->num_rows();
+                ->row_array();
 
-            if (!$count) {
+            if (!$customer) {
                 throw new InvalidArgumentException(
                     'The appointment customer ID was not found in the database: ' . $appointment['id_users_customer'],
                 );
+            }
+
+            // Student-specific validations
+            if ($customer['slug'] === 'alumno') {
+                $this->validate_alumno_appointment($appointment, $customer['id']);
             }
 
             // Make sure the service ID really exists in the database.
@@ -175,6 +179,37 @@ class Appointments_model extends EA_Model
             if (!$count) {
                 throw new InvalidArgumentException('Appointment service id is invalid.');
             }
+        }
+    }
+
+    /**
+     * Validate appointment restrictions for 'alumno' role.
+     *
+     * @param array $appointment Appointment data.
+     * @param int $user_id User ID.
+     *
+     * @throws InvalidArgumentException
+     */
+    protected function validate_alumno_appointment(array $appointment, int $user_id): void
+    {
+        $this->load->model('users_model');
+
+        $quota = $this->users_model->get_appointment_quota($user_id);
+        if ($quota !== null && $quota > 0) {
+            $total_appointments = $this->users_model->get_total_appointments_count($user_id);
+            if ($total_appointments >= $quota) {
+                throw new InvalidArgumentException('Has alcanzado el límite máximo de citas permitidas.');
+            }
+        }
+
+        $allowed_services = $this->users_model->get_allowed_services($user_id);
+        if (!empty($allowed_services) && !in_array($appointment['id_services'], $allowed_services, true)) {
+            throw new InvalidArgumentException('El servicio seleccionado no está permitido para tu cuenta.');
+        }
+
+        $allowed_providers = $this->users_model->get_allowed_providers($user_id);
+        if (!empty($allowed_providers) && !in_array($appointment['id_users_provider'], $allowed_providers, true)) {
+            throw new InvalidArgumentException('El profesional seleccionado no está permitido para tu cuenta.');
         }
     }
 

@@ -461,4 +461,143 @@ class Users_model extends EA_Model
 
         return $this->db->get_where('user_settings', ['username' => $username])->num_rows() === 0;
     }
+
+    /**
+     * Check if a user is approved.
+     *
+     * @param int $user_id User ID.
+     *
+     * @return bool Returns true if approved, false otherwise.
+     */
+    public function is_approved(int $user_id): bool
+    {
+        $user = $this->db->get_where('users', ['id' => $user_id])->row_array();
+        return !empty($user) && (int) $user['is_approved'] === 1;
+    }
+
+    /**
+     * Get the appointment quota for a user.
+     *
+     * @param int $user_id User ID.
+     *
+     * @return int|null Returns the quota or null if not set.
+     */
+    public function get_appointment_quota(int $user_id): ?int
+    {
+        $settings = $this->db->get_where('user_settings', ['id_users' => $user_id])->row_array();
+        return $settings ? (int) $settings['appointment_quota'] : null;
+    }
+
+    /**
+     * Get the total historical appointments count for a user.
+     *
+     * @param int $user_id User ID.
+     *
+     * @return int Returns the total appointments count.
+     */
+    public function get_total_appointments_count(int $user_id): int
+    {
+        return $this->db
+            ->where('id_users_customer', $user_id)
+            ->count_all_results('appointments');
+    }
+
+    /**
+     * Get allowed services for an alumno.
+     *
+     * @param int $user_id User ID.
+     *
+     * @return array Returns an array of service IDs.
+     */
+    public function get_allowed_services(int $user_id): array
+    {
+        $result = $this->db
+            ->select('id_services')
+            ->from('alumnos_services')
+            ->where('id_users', $user_id)
+            ->get()
+            ->result_array();
+
+        return array_column($result, 'id_services');
+    }
+
+    /**
+     * Get allowed providers for an alumno.
+     *
+     * @param int $user_id User ID.
+     *
+     * @return array Returns an array of provider IDs.
+     */
+    public function get_allowed_providers(int $user_id): array
+    {
+        $result = $this->db
+            ->select('id_users_provider')
+            ->from('alumnos_providers')
+            ->where('id_users', $user_id)
+            ->get()
+            ->result_array();
+
+        return array_column($result, 'id_users_provider');
+    }
+
+    /**
+     * Save allowed services for an alumno.
+     *
+     * @param int $user_id User ID.
+     * @param array $service_ids Array of service IDs.
+     *
+     * @throws RuntimeException
+     */
+    public function save_allowed_services(int $user_id, array $service_ids): void
+    {
+        $this->db->trans_start();
+        $this->db->delete('alumnos_services', ['id_users' => $user_id]);
+
+        if (!empty($service_ids)) {
+            $data = [];
+            foreach ($service_ids as $service_id) {
+                $data[] = [
+                    'id_users' => $user_id,
+                    'id_services' => (int) $service_id,
+                ];
+            }
+            $this->db->insert_batch('alumnos_services', $data);
+        }
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === false) {
+            throw new RuntimeException('Could not save allowed services for user.');
+        }
+    }
+
+    /**
+     * Save allowed providers for an alumno.
+     *
+     * @param int $user_id User ID.
+     * @param array $provider_ids Array of provider IDs.
+     *
+     * @throws RuntimeException
+     */
+    public function save_allowed_providers(int $user_id, array $provider_ids): void
+    {
+        $this->db->trans_start();
+        $this->db->delete('alumnos_providers', ['id_users' => $user_id]);
+
+        if (!empty($provider_ids)) {
+            $data = [];
+            foreach ($provider_ids as $provider_id) {
+                $data[] = [
+                    'id_users' => $user_id,
+                    'id_users_provider' => (int) $provider_id,
+                ];
+            }
+            $this->db->insert_batch('alumnos_providers', $data);
+        }
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === false) {
+            throw new RuntimeException('Could not save allowed providers for user.');
+        }
+    }
 }
+

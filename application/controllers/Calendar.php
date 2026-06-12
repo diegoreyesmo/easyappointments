@@ -746,6 +746,18 @@ class Calendar extends EA_Controller
                 $response['unavailabilities'] = array_values($response['unavailabilities']);
             }
 
+            // If the current user is an alumno, they must only see their own appointments.
+            if ($role_slug === 'alumno') {
+                foreach ($response['appointments'] as $index => $appointment) {
+                    if ((int) $appointment['id_users_customer'] !== (int) $user_id) {
+                        unset($response['appointments'][$index]);
+                    }
+                }
+
+                $response['appointments'] = array_values($response['appointments']);
+                $response['unavailabilities'] = [];
+            }
+
             foreach ($response['unavailabilities'] as &$unavailability) {
                 $unavailability['provider'] = $this->providers_model->find($unavailability['id_users_provider']);
             }
@@ -933,6 +945,18 @@ class Calendar extends EA_Controller
                 }
 
                 $response['unavailabilities'] = array_values($response['unavailabilities']);
+            }
+
+            // If the current user is an alumno, they must only see their own appointments.
+            if ($role_slug === 'alumno') {
+                foreach ($response['appointments'] as $index => $appointment) {
+                    if ((int) $appointment['id_users_customer'] !== (int) $user_id) {
+                        unset($response['appointments'][$index]);
+                    }
+                }
+
+                $response['appointments'] = array_values($response['appointments']);
+                $response['unavailabilities'] = [];
             }
 
             foreach ($response['unavailabilities'] as &$unavailability) {

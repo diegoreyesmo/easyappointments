@@ -160,6 +160,34 @@ class Booking extends EA_Controller
         $available_services = $this->services_model->get_available_services(true);
         $available_providers = $this->providers_model->get_available_providers(true);
 
+        // Filter services and providers for 'alumno' role
+        $user_id = session('user_id');
+        $role_slug = session('role_slug');
+
+        if ($user_id && $role_slug === 'alumno') {
+            $this->load->model('users_model');
+            
+            $allowed_services = $this->users_model->get_allowed_services($user_id);
+            if (!empty($allowed_services)) {
+                $available_services = array_filter($available_services, function ($service) use ($allowed_services) {
+                    return in_array($service['id'], $allowed_services, true);
+                });
+                $available_services = array_values($available_services);
+            } else {
+                $available_services = [];
+            }
+
+            $allowed_providers = $this->users_model->get_allowed_providers($user_id);
+            if (!empty($allowed_providers)) {
+                $available_providers = array_filter($available_providers, function ($provider) use ($allowed_providers) {
+                    return in_array($provider['id'], $allowed_providers, true);
+                });
+                $available_providers = array_values($available_providers);
+            } else {
+                $available_providers = [];
+            }
+        }
+
         foreach ($available_providers as &$available_provider) {
             // Only expose the required provider data.
 
