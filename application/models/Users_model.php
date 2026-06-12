@@ -115,7 +115,7 @@ class Users_model extends EA_Model
         $user['update_datetime'] = date('Y-m-d H:i:s');
 
         $settings = $user['settings'];
-        unset($user['settings']);
+        unset($user['settings'], $user['allowed_services'], $user['allowed_providers']);
 
         if (!$this->db->insert('users', $user)) {
             throw new RuntimeException('Could not insert user.');
@@ -184,7 +184,7 @@ class Users_model extends EA_Model
         $user['update_datetime'] = date('Y-m-d H:i:s');
 
         $settings = $user['settings'];
-        unset($user['settings']);
+        unset($user['settings'], $user['allowed_services'], $user['allowed_providers']);
 
         if (isset($settings['password'])) {
             $existing_settings = $this->db->get_where('user_settings', ['id_users' => $user['id']])->row_array();
