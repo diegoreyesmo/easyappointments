@@ -437,6 +437,16 @@ $customer_address = trim((string) ($customer['address'] ?? ''));
                                                     <?= e($provider['first_name'] . ' ' . $provider['last_name']) ?>
                                                 </td>
                                             </tr>
+                                            <?php if (!empty($settings['company_address'])): ?>
+                                            <tr>
+                                                <td class="label" style="padding: 3px;font-weight: bold;">
+                                                    <?= lang('company_address') ?>
+                                                </td>
+                                                <td style="padding: 3px;">
+                                                    <?= e($settings['company_address']) ?>
+                                                </td>
+                                            </tr>
+                                            <?php endif; ?>
                                             <tr>
                                                 <td class="label" style="padding: 3px;font-weight: bold;">
                                                     <?= lang('start') ?>
