@@ -21,7 +21,7 @@
 
                 <button id="cancel-appointment" class="btn btn-warning btn-sm">
                     <i class="fas fa-trash me-2"></i>
-                    <?= lang('delete') ?>
+                    <?= lang('cancel') ?>
                 </button>
             </form>
         </div>
@@ -34,7 +34,7 @@
             <div class="col-lg-3 text-end">
                 <button id="delete-personal-information" class="btn btn-danger btn-sm">
                     <i class="fas fa-trash me-2"></i>
-                    <?= lang('delete') ?>
+                    <?= lang('cancel') ?>
                 </button>
             </div>
         </div>
