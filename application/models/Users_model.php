@@ -522,7 +522,7 @@ class Users_model extends EA_Model
             ->get()
             ->result_array();
 
-        return array_column($result, 'id_services');
+        return array_map('intval', array_column($result, 'id_services'));
     }
 
     /**
@@ -541,7 +541,7 @@ class Users_model extends EA_Model
             ->get()
             ->result_array();
 
-        return array_column($result, 'id_users_provider');
+        return array_map('intval', array_column($result, 'id_users_provider'));
     }
 
     /**
