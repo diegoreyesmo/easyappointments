@@ -303,6 +303,36 @@ App.Http.Calendar = (function () {
         attemptSave();
     }
 
+    /**
+     * Search customers and alumnos for the appointment modal.
+     *
+     * @param {String} keyword Search keyword.
+     * @param {Number} limit Result limit.
+     * @param {Number} [idServices] Optional service ID for alumno filtering.
+     * @param {Number} [idUsersProvider] Optional provider ID for alumno filtering.
+     *
+     * @returns {jQuery.jqXHR}
+     */
+    function searchPatients(keyword, limit, idServices, idUsersProvider) {
+        const url = App.Utils.Url.siteUrl('calendar/search_patients');
+
+        const data = {
+            csrf_token: vars('csrf_token'),
+            keyword,
+            limit,
+        };
+
+        if (idServices) {
+            data.id_services = idServices;
+        }
+
+        if (idUsersProvider) {
+            data.id_users_provider = idUsersProvider;
+        }
+
+        return $.post(url, data);
+    }
+
     return {
         saveAppointment,
         saveAppointmentWithConflictHandling,
@@ -313,5 +343,6 @@ App.Http.Calendar = (function () {
         deleteWorkingPlanException,
         getCalendarAppointments,
         getCalendarAppointmentsForTableView,
+        searchPatients,
     };
 })();

@@ -735,8 +735,10 @@ App.Utils.CalendarDefaultView = (function () {
     function onSelect(info) {
         if (info.allDay) return;
 
-        const buttons = [
-            {
+        const buttons = [];
+
+        if (vars('role_slug') !== 'alumno') {
+            buttons.push({
                 text: lang('unavailability'),
                 click: (event, messageModal) => {
                     $('#insert-unavailability').trigger('click');
@@ -751,28 +753,31 @@ App.Utils.CalendarDefaultView = (function () {
                     App.Utils.UI.setDateTimePickerValue($('#unavailability-end'), info.end);
                     messageModal.hide();
                 },
+            });
+        }
+
+        buttons.push({
+            text: lang('appointment'),
+            click: (event, messageModal) => {
+                $('#insert-appointment').trigger('click');
+                preselectServiceAndProvider();
+                App.Utils.UI.setDateTimePickerValue($('#start-datetime'), info.start);
+                App.Utils.UI.setDateTimePickerValue(
+                    $('#end-datetime'),
+                    App.Pages.Calendar.getSelectionEndDate(info),
+                );
+                messageModal.hide();
             },
-            {
-                text: lang('appointment'),
-                click: (event, messageModal) => {
-                    $('#insert-appointment').trigger('click');
-                    preselectServiceAndProvider();
-                    App.Utils.UI.setDateTimePickerValue($('#start-datetime'), info.start);
-                    App.Utils.UI.setDateTimePickerValue(
-                        $('#end-datetime'),
-                        App.Pages.Calendar.getSelectionEndDate(info),
-                    );
-                    messageModal.hide();
-                },
-            },
-        ];
+        });
 
         App.Utils.Message.show(lang('add_new_event'), lang('what_kind_of_event'), buttons);
 
-        $('#message-modal .modal-footer')
-            .addClass('justify-content-between')
-            .find('.btn')
-            .css('width', 'calc(50% - 10px)');
+        const $footer = $('#message-modal .modal-footer').addClass('justify-content-between');
+        if (buttons.length > 1) {
+            $footer.find('.btn').css('width', 'calc(50% - 10px)');
+        } else {
+            $footer.find('.btn').css('width', '');
+        }
 
         fullCalendar.unselect();
 

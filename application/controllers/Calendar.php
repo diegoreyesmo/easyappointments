@@ -189,25 +189,65 @@ class Calendar extends EA_Controller
             }),
         );
 
+        if ($role_slug === 'alumno') {
+            $this->load->model('users_model');
+
+            $allowed_services = $this->users_model->get_allowed_services($user_id);
+            if (!empty($allowed_services)) {
+                $available_services = array_values(array_filter($available_services, function ($s) use ($allowed_services) {
+                    return in_array($s['id'], $allowed_services, true);
+                }));
+                $available_providers = array_values(array_filter($available_providers, function ($p) use ($allowed_services) {
+                    return !empty(array_intersect($p['services'], $allowed_services));
+                }));
+            }
+
+            $allowed_providers = $this->users_model->get_allowed_providers($user_id);
+            if (!empty($allowed_providers)) {
+                $available_providers = array_values(array_filter($available_providers, function ($p) use ($allowed_providers) {
+                    return in_array($p['id'], $allowed_providers, true);
+                }));
+            }
+        }
+
         $calendar_view = request('view', $user['settings']['calendar_view']);
 
         $appointment_status_options = setting('appointment_status_options');
 
-        $customers = $this->customers_model->get(null, 50, null, 'update_datetime DESC');
+        if ($role_slug === 'alumno') {
+            $customers = [$user];
+            $alumnos = [];
+        } else {
+            $customers = $this->customers_model->get(null, 50, null, 'update_datetime DESC');
 
-        if (setting('limit_customer_access') && $role_slug === DB_SLUG_PROVIDER) {
-            // Only include the customers that the provider is supposed to see (they had past booking together)
-            $CI = $this;
+            if (setting('limit_customer_access') && $role_slug === DB_SLUG_PROVIDER) {
+                // Only include the customers that the provider is supposed to see (they had past booking together)
+                $CI = $this;
 
-            $customers = array_values(
-                array_filter($customers, function ($customer) use ($user_id, $CI) {
-                    if (!$CI->permissions->has_customer_access($user_id, $customer['id'])) {
-                        return false;
-                    }
+                $customers = array_values(
+                    array_filter($customers, function ($customer) use ($user_id, $CI) {
+                        if (!$CI->permissions->has_customer_access($user_id, $customer['id'])) {
+                            return false;
+                        }
 
-                    return true;
-                }),
-            );
+                        return true;
+                    }),
+                );
+            }
+
+            $this->load->model('users_model');
+
+            $alumnos_raw = $this->users_model->search('', 50, 0, 'update_datetime DESC');
+            $alumnos = [];
+            foreach ($alumnos_raw as $a) {
+                $role = $this->roles_model->find($a['id_roles']);
+                if (isset($role['slug']) && $role['slug'] === 'alumno') {
+                    $a['allowed_services'] = $this->users_model->get_allowed_services($a['id']);
+                    $a['allowed_providers'] = $this->users_model->get_allowed_providers($a['id']);
+                    $a['role_type'] = 'alumno';
+                    $alumnos[] = $a;
+                }
+            }
         }
 
         script_vars([
@@ -229,6 +269,7 @@ class Calendar extends EA_Controller
                 FILTER_VALIDATE_BOOLEAN,
             ),
             'customers' => $customers,
+            'alumnos' => $alumnos,
             'default_language' => setting('default_language'),
             'default_timezone' => setting('default_timezone'),
         ]);
@@ -282,6 +323,26 @@ class Calendar extends EA_Controller
             $force_save = filter_var(request('force_save', false), FILTER_VALIDATE_BOOLEAN);
 
             $this->check_event_permissions((int) $appointment_data['id_users_provider']);
+
+            $role_slug = session('role_slug');
+
+            if ($role_slug === 'alumno') {
+                $alumno_user_id = session('user_id');
+                $appointment_data['id_users_customer'] = $alumno_user_id;
+                $customer_data = null;
+
+                $this->load->model('users_model');
+
+                $allowed_services = $this->users_model->get_allowed_services($alumno_user_id);
+                if (!empty($allowed_services) && !in_array($appointment_data['id_services'], $allowed_services, true)) {
+                    throw new RuntimeException('The selected service is not allowed for your account.');
+                }
+
+                $allowed_providers = $this->users_model->get_allowed_providers($alumno_user_id);
+                if (!empty($allowed_providers) && !in_array($appointment_data['id_users_provider'], $allowed_providers, true)) {
+                    throw new RuntimeException('The selected provider is not allowed for your account.');
+                }
+            }
 
             // Save customer changes to the database.
             if ($customer_data) {
@@ -434,6 +495,15 @@ class Calendar extends EA_Controller
         $user_id = (int) session('user_id');
         $role_slug = session('role_slug');
 
+        if ($role_slug === 'alumno') {
+            $this->load->model('users_model');
+            $allowed_providers = $this->users_model->get_allowed_providers($user_id);
+            if (!empty($allowed_providers) && !in_array($provider_id, $allowed_providers, true)) {
+                abort(403);
+            }
+            return;
+        }
+
         if (
             $role_slug === DB_SLUG_SECRETARY &&
             !$this->secretaries_model->is_provider_supported($user_id, $provider_id)
@@ -443,6 +513,72 @@ class Calendar extends EA_Controller
 
         if ($role_slug === DB_SLUG_PROVIDER && $user_id !== $provider_id) {
             abort(403);
+        }
+    }
+
+    /**
+     * Search customers and alumnos for the appointment modal.
+     */
+    public function search_patients(): void
+    {
+        try {
+            method('post');
+
+            if (cannot('view', PRIV_APPOINTMENTS)) {
+                abort(403, 'Forbidden');
+            }
+
+            check('keyword', 'string|null');
+            check('limit', 'numeric|null');
+            check('id_services', 'numeric|null');
+            check('id_users_provider', 'numeric|null');
+
+            $keyword = request('keyword', '');
+            $limit = request('limit', 50);
+            $id_services = request('id_services');
+            $id_users_provider = request('id_users_provider');
+
+            $customers = $this->customers_model->search($keyword, $limit);
+            foreach ($customers as &$c) {
+                $c['role_type'] = 'customer';
+            }
+            unset($c);
+
+            $this->load->model('users_model');
+
+            $alumnos_raw = $this->users_model->search($keyword, $limit);
+            $filtered_alumnos = [];
+            foreach ($alumnos_raw as $alumno) {
+                if (!isset($alumno['id_roles'])) {
+                    continue;
+                }
+
+                $role = $this->roles_model->find($alumno['id_roles']);
+                if (!isset($role['slug']) || $role['slug'] !== 'alumno') {
+                    continue;
+                }
+
+                if ($id_services) {
+                    $allowed_services = $this->users_model->get_allowed_services($alumno['id']);
+                    if (!empty($allowed_services) && !in_array($id_services, $allowed_services, true)) {
+                        continue;
+                    }
+                }
+
+                if ($id_users_provider) {
+                    $allowed_providers = $this->users_model->get_allowed_providers($alumno['id']);
+                    if (!empty($allowed_providers) && !in_array($id_users_provider, $allowed_providers, true)) {
+                        continue;
+                    }
+                }
+
+                $alumno['role_type'] = 'alumno';
+                $filtered_alumnos[] = $alumno;
+            }
+
+            json_response(array_merge($customers, $filtered_alumnos));
+        } catch (Throwable $e) {
+            json_exception($e);
         }
     }
 

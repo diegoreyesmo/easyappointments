@@ -283,6 +283,28 @@ App.Components.AppointmentsModal = (function () {
             // Display modal form.
             $appointmentsModal.find('.modal-header h3').text(lang('new_appointment_title'));
 
+            if (vars('role_slug') === 'alumno') {
+                const alumnoData = vars('customers') && vars('customers')[0];
+                if (alumnoData) {
+                    $customerId.val(alumnoData.id);
+                    $firstName.val(alumnoData.first_name);
+                    $lastName.val(alumnoData.last_name);
+                    $email.val(alumnoData.email);
+                    $phoneNumber.val(alumnoData.phone_number);
+                    $address.val(alumnoData.address);
+                    $city.val(alumnoData.city);
+                    $zipCode.val(alumnoData.zip_code);
+                    $language.val(alumnoData.language || vars('default_language'));
+                    $timezone.val(alumnoData.timezone || vars('default_timezone'));
+                    $customerNotes.val(alumnoData.notes);
+                }
+                $selectCustomer.hide();
+                $newCustomer.hide();
+            } else {
+                $selectCustomer.show();
+                $newCustomer.show();
+            }
+
             $appointmentsModal.modal('show');
         });
 
@@ -300,10 +322,24 @@ App.Components.AppointmentsModal = (function () {
                 vars('customers').forEach((customer) => {
                     $('<div/>', {
                         'data-id': customer.id,
+                        'data-type': 'customer',
                         'text':
                             (customer.first_name || '[No First Name]') + ' ' + (customer.last_name || '[No Last Name]'),
                     }).appendTo($existingCustomersList);
                 });
+                if (vars('alumnos')) {
+                    vars('alumnos').forEach((alumno) => {
+                        $('<div/>', {
+                            'data-id': alumno.id,
+                            'data-type': 'alumno',
+                            'text':
+                                (alumno.first_name || '[No First Name]') +
+                                ' ' +
+                                (alumno.last_name || '[No Last Name]') +
+                                ' (Alumno)',
+                        }).appendTo($existingCustomersList);
+                    });
+                }
             } else {
                 $existingCustomersList.slideUp('slow');
                 $filterExistingCustomers.fadeOut('slow');
@@ -318,26 +354,32 @@ App.Components.AppointmentsModal = (function () {
          */
         $appointmentsModal.on('click', '#existing-customers-list div', (event) => {
             const customerId = $(event.target).attr('data-id');
+            const customerType = $(event.target).attr('data-type') || 'customer';
 
-            const customer = vars('customers').find((customer) => Number(customer.id) === Number(customerId));
+            const pool = customerType === 'alumno' ? vars('alumnos') : vars('customers');
+            const person = pool
+                ? pool.find((p) => Number(p.id) === Number(customerId))
+                : undefined;
 
-            if (customer) {
-                $customerId.val(customer.id);
-                $firstName.val(customer.first_name);
-                $lastName.val(customer.last_name);
-                $email.val(customer.email);
-                $phoneNumber.val(customer.phone_number);
-                $address.val(customer.address);
-                $city.val(customer.city);
-                $zipCode.val(customer.zip_code);
-                $language.val(customer.language);
-                $timezone.val(customer.timezone);
-                $customerNotes.val(customer.notes);
-                $customField1.val(customer.custom_field_1);
-                $customField2.val(customer.custom_field_2);
-                $customField3.val(customer.custom_field_3);
-                $customField4.val(customer.custom_field_4);
-                $customField5.val(customer.custom_field_5);
+            if (person) {
+                $customerId.val(person.id);
+                $firstName.val(person.first_name);
+                $lastName.val(person.last_name);
+                $email.val(person.email);
+                $phoneNumber.val(person.phone_number);
+                $address.val(person.address);
+                $city.val(person.city);
+                $zipCode.val(person.zip_code);
+                $language.val(person.language);
+                $timezone.val(person.timezone);
+                $customerNotes.val(person.notes);
+                if (customerType !== 'alumno') {
+                    $customField1.val(person.custom_field_1);
+                    $customField2.val(person.custom_field_2);
+                    $customField3.val(person.custom_field_3);
+                    $customField4.val(person.custom_field_4);
+                    $customField5.val(person.custom_field_5);
+                }
             }
 
             $selectCustomer.trigger('click'); // Hide the list.
@@ -360,27 +402,32 @@ App.Components.AppointmentsModal = (function () {
             filterExistingCustomersTimeout = setTimeout(() => {
                 $('#loading').css('visibility', 'hidden');
 
-                App.Http.Customers.search(keyword, 50)
+                const serviceId = $selectService.val();
+                const providerId = $selectProvider.val();
+
+                App.Http.Calendar.searchPatients(keyword, 50, serviceId, providerId)
                     .done((response) => {
                         $existingCustomersList.empty();
 
-                        response.forEach((customer) => {
+                        response.forEach((patient) => {
+                            const label =
+                                (patient.first_name || '[No First Name]') +
+                                ' ' +
+                                (patient.last_name || '[No Last Name]') +
+                                (patient.role_type === 'alumno' ? ' (Alumno)' : '');
+
                             $('<div/>', {
-                                'data-id': customer.id,
-                                'text':
-                                    (customer.first_name || '[No First Name]') +
-                                    ' ' +
-                                    (customer.last_name || '[No Last Name]'),
+                                'data-id': patient.id,
+                                'data-type': patient.role_type || 'customer',
+                                'text': label,
                             }).appendTo($existingCustomersList);
 
-                            // Verify if this customer is on the old customer list.
-                            const result = vars('customers').filter((existingCustomer) => {
-                                return Number(existingCustomer.id) === Number(customer.id);
-                            });
-
-                            // Add it to the customer list.
-                            if (!result.length) {
-                                vars('customers').push(customer);
+                            const targetArray = patient.role_type === 'alumno' ? vars('alumnos') : vars('customers');
+                            if (targetArray) {
+                                const exists = targetArray.find((e) => Number(e.id) === Number(patient.id));
+                                if (!exists) {
+                                    targetArray.push(patient);
+                                }
                             }
                         });
                     })
@@ -401,6 +448,7 @@ App.Components.AppointmentsModal = (function () {
                             ) {
                                 $('<div/>', {
                                     'data-id': customer.id,
+                                    'data-type': 'customer',
                                     'text':
                                         (customer.first_name || '[No First Name]') +
                                         ' ' +
@@ -408,6 +456,26 @@ App.Components.AppointmentsModal = (function () {
                                 }).appendTo($existingCustomersList);
                             }
                         });
+
+                        if (vars('alumnos')) {
+                            vars('alumnos').forEach((alumno) => {
+                                if (
+                                    alumno.first_name.toLowerCase().indexOf(keyword) !== -1 ||
+                                    alumno.last_name.toLowerCase().indexOf(keyword) !== -1 ||
+                                    alumno.email.toLowerCase().indexOf(keyword) !== -1
+                                ) {
+                                    $('<div/>', {
+                                        'data-id': alumno.id,
+                                        'data-type': 'alumno',
+                                        'text':
+                                            (alumno.first_name || '[No First Name]') +
+                                            ' ' +
+                                            (alumno.last_name || '[No Last Name]') +
+                                            ' (Alumno)',
+                                    }).appendTo($existingCustomersList);
+                                }
+                            });
+                        }
                     })
                     .always(() => {
                         $('#loading').css('visibility', '');
