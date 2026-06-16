@@ -135,7 +135,7 @@ class Booking extends EA_Controller
         $matomo_analytics_url = setting('matomo_analytics_url');
         $matomo_analytics_site_id = setting('matomo_analytics_site_id');
 
-        if ($disable_booking) {
+        if ($disable_booking && !session('user_id')) {
             $disable_booking_message = setting('disable_booking_message');
 
             html_vars([
@@ -405,7 +405,7 @@ class Booking extends EA_Controller
 
             $disable_booking = setting('disable_booking');
 
-            if ($disable_booking) {
+            if ($disable_booking && !session('user_id')) {
                 abort(403);
             }
 
@@ -757,7 +757,7 @@ class Booking extends EA_Controller
 
             $disable_booking = setting('disable_booking');
 
-            if ($disable_booking) {
+            if ($disable_booking && !session('user_id')) {
                 abort(403);
             }
 
@@ -847,7 +847,7 @@ class Booking extends EA_Controller
 
             $disable_booking = setting('disable_booking');
 
-            if ($disable_booking) {
+            if ($disable_booking && !session('user_id')) {
                 abort(403);
             }
 
@@ -979,7 +979,7 @@ class Booking extends EA_Controller
 
             $disable_booking = setting('disable_booking');
 
-            if ($disable_booking) {
+            if ($disable_booking && !session('user_id')) {
                 abort(403);
             }
 

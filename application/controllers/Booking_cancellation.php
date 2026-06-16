@@ -51,7 +51,7 @@ class Booking_cancellation extends EA_Controller
         try {
             $disable_booking = setting('disable_booking');
 
-            if ($disable_booking) {
+            if ($disable_booking && !session('user_id')) {
                 abort(403);
             }
 
