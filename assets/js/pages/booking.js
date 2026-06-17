@@ -1126,10 +1126,29 @@ App.Pages.Booking = (function () {
 
     document.addEventListener('DOMContentLoaded', initialize);
 
+    function goToPaymentStep(response) {
+        window.AppointmentHash = response.appointment_hash;
+
+        const nextTabIndex = 4;
+
+        $('.active-step').removeClass('active-step');
+        $('#step-' + nextTabIndex).addClass('active-step');
+
+        $('#wizard-frame-3').fadeOut(() => {
+            $('#wizard-frame-4').fadeIn();
+        });
+
+        const scrollingElement = document.scrollingElement || document.body;
+        if (window.innerHeight < scrollingElement.scrollHeight) {
+            scrollingElement.scrollTop = 0;
+        }
+    }
+
     return {
         manageMode,
         updateConfirmFrame,
         updateServiceDescription,
         validateCustomerForm,
+        goToPaymentStep,
     };
 })();

@@ -45,6 +45,12 @@
     'require_notes' => vars('require_notes'),
 ]); ?>
 
+<!-- Payment Step (conditional) -->
+
+<?php if (vars('mercadopago_enabled')): ?>
+    <?php component('booking_payment_step'); ?>
+<?php endif; ?>
+
 <!-- Appointment Data Confirmation -->
 
 <?php component('booking_final_step', [
@@ -63,5 +69,8 @@
 <script src="<?= asset_url('assets/js/utils/ui.js') ?>"></script>
 <script src="<?= asset_url('assets/js/http/booking_http_client.js') ?>"></script>
 <script src="<?= asset_url('assets/js/pages/booking.js') ?>"></script>
+<?php if (vars('mercadopago_enabled')): ?>
+<script src="<?= asset_url('assets/js/pages/booking_payment.js') ?>"></script>
+<?php endif; ?>
 
 <?php end_section('scripts'); ?>

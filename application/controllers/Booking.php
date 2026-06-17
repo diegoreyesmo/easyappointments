@@ -55,6 +55,8 @@ class Booking extends EA_Controller
         'id_users_provider',
         'id_users_customer',
         'id_services',
+        'payment_required',
+        'payment_status',
     ];
 
     /**
@@ -73,6 +75,7 @@ class Booking extends EA_Controller
         $this->load->model('customers_model');
         $this->load->model('settings_model');
         $this->load->model('consents_model');
+        $this->load->model('payments_model');
 
         $this->load->library('timezones');
         $this->load->library('synchronization');
@@ -80,6 +83,7 @@ class Booking extends EA_Controller
         $this->load->library('availability');
         $this->load->library('webhooks_client');
         $this->load->library('jitsi_client');
+        $this->load->library('mercadopago_client');
     }
 
     /**
@@ -337,6 +341,9 @@ class Booking extends EA_Controller
             'customer_token' => $customer_token,
             'default_language' => setting('default_language'),
             'default_timezone' => setting('default_timezone'),
+            'mercadopago_enabled' => setting('mercadopago_enabled'),
+            'mercadopago_public_key' => setting('mercadopago_public_key'),
+            'mercadopago_sandbox' => setting('mercadopago_sandbox'),
         ]);
 
         html_vars([
@@ -385,6 +392,7 @@ class Booking extends EA_Controller
             'appointment_data' => $appointment,
             'provider_data' => $provider ? filter_sensitive_user_data($provider) : null,
             'customer_data' => $customer,
+            'mercadopago_enabled' => setting('mercadopago_enabled'),
         ]);
 
         $this->load->view('pages/booking');
@@ -583,6 +591,10 @@ class Booking extends EA_Controller
             $appointment['status'] = $appointment_status_options[0] ?? null;
             $appointment['end_datetime'] = $this->appointments_model->calculate_end_datetime($appointment);
 
+            $requires_payment = setting('mercadopago_enabled') && (float) ($service['price'] ?? 0) > 0;
+            $appointment['payment_required'] = $requires_payment ? 1 : 0;
+            $appointment['payment_status'] = $requires_payment ? 'pending' : 'none';
+
             $this->appointments_model->only($appointment, $this->allowed_appointment_fields);
 
             $appointment_start = microtime(true);
@@ -602,6 +614,33 @@ class Booking extends EA_Controller
                 'date_format' => setting('date_format'),
                 'time_format' => setting('time_format'),
             ];
+
+            if ($requires_payment) {
+                $sync_start = microtime(true);
+                $this->synchronization->sync_appointment_saved($appointment, $service, $provider, $customer, $settings);
+                $sync_duration = round((microtime(true) - $sync_start) * 1000, 2);
+                log_message('debug', '[PERF] Appointment Creation - Synchronization took ' . $sync_duration . 'ms');
+
+                $webhook_start = microtime(true);
+                $this->webhooks_client->trigger(WEBHOOK_APPOINTMENT_SAVE, $appointment);
+                $webhook_duration = round((microtime(true) - $webhook_start) * 1000, 2);
+                log_message('debug', '[PERF] Appointment Creation - Webhooks trigger took ' . $webhook_duration . 'ms');
+
+                $total_duration = round((microtime(true) - $total_start) * 1000, 2);
+                log_message('debug', '[PERF] Appointment Creation - Total register took ' . $total_duration . 'ms');
+
+                $response = [
+                    'appointment_id' => $appointment['id'],
+                    'appointment_hash' => $appointment['hash'],
+                    'requires_payment' => true,
+                    'payment_status' => 'pending',
+                    'amount' => (float) $service['price'],
+                    'currency' => $service['currency'] ?: setting('mercadopago_currency') ?: 'CLP',
+                ];
+
+                json_response($response);
+                return;
+            }
 
             $sync_start = microtime(true);
             $this->synchronization->sync_appointment_saved($appointment, $service, $provider, $customer, $settings);
@@ -631,6 +670,7 @@ class Booking extends EA_Controller
             $response = [
                 'appointment_id' => $appointment['id'],
                 'appointment_hash' => $appointment['hash'],
+                'requires_payment' => false,
             ];
 
             json_response($response);

@@ -62,6 +62,10 @@ class Notifications
         array $settings,
         bool $manage_mode = false,
     ): void {
+        if (!empty($appointment['payment_required']) && ($appointment['payment_status'] ?? 'none') !== 'approved') {
+            return;
+        }
+
         if (filter_var(setting('email_queue_enabled'), FILTER_VALIDATE_BOOLEAN)) {
             try {
                 $appointment_id = (int) ($appointment['id'] ?? 0);
@@ -420,6 +424,151 @@ class Notifications
                     $e->getMessage(),
             );
             log_message('error', $e->getTraceAsString());
+        } finally {
+            config(['language' => $current_language ?? 'english']);
+            $this->CI->lang->load('translations');
+        }
+    }
+
+    /**
+     * Send notifications when a payment is approved.
+     *
+     * @param array $appointment Appointment data.
+     * @param array $service Service data.
+     * @param array $provider Provider data.
+     * @param array $customer Customer data.
+     * @param array $settings Required settings.
+     */
+    public function notify_payment_approved(
+        array $appointment,
+        array $service,
+        array $provider,
+        array $customer,
+        array $settings,
+    ): void {
+        if (filter_var(setting('email_queue_enabled'), FILTER_VALIDATE_BOOLEAN)) {
+            try {
+                $appointment_id = (int) ($appointment['id'] ?? 0);
+                if ($appointment_id === 0) {
+                    return;
+                }
+
+                if (!empty($customer['email']) && filter_var(setting('customer_notifications'), FILTER_VALIDATE_BOOLEAN)) {
+                    $this->CI->email_queue_model->add_to_queue('payment_approved', $appointment_id, 'customer', $customer['email']);
+                }
+
+                if (filter_var($this->CI->providers_model->get_setting($provider['id'], 'notifications'), FILTER_VALIDATE_BOOLEAN)) {
+                    $this->CI->email_queue_model->add_to_queue('payment_approved', $appointment_id, 'provider', $provider['email']);
+                }
+
+                $admins = $this->CI->admins_model->get();
+                foreach ($admins as $admin) {
+                    if ($admin['settings']['notifications'] === '0') {
+                        continue;
+                    }
+                    $this->CI->email_queue_model->add_to_queue('payment_approved', $appointment_id, 'admin', $admin['email']);
+                }
+            } catch (Throwable $e) {
+                $this->log_exception($e, 'payment-approved queueing', $appointment['id'] ?? null);
+            }
+            return;
+        }
+
+        try {
+            $current_language = config('language');
+
+            $customer_link = site_url('booking/reschedule/' . $appointment['hash']);
+            $provider_link = site_url('calendar/reschedule/' . $appointment['hash']);
+
+            $ics_stream = $this->CI->ics_file->get_stream($appointment, $service, $provider, $customer);
+
+            // Notify customer.
+            $send_customer =
+                !empty($customer['email']) && filter_var(setting('customer_notifications'), FILTER_VALIDATE_BOOLEAN);
+
+            if ($send_customer === true) {
+                config(['language' => $customer['language']]);
+                $this->CI->lang->load('translations');
+
+                try {
+                    $this->CI->email_messages->send_appointment_saved(
+                        $appointment,
+                        $provider,
+                        $service,
+                        $customer,
+                        $settings,
+                        lang('payment_approved_notification_subject'),
+                        lang('payment_approved_notification_message'),
+                        $customer_link,
+                        $customer['email'],
+                        $ics_stream,
+                        $customer['timezone'],
+                    );
+                } catch (Throwable $e) {
+                    $this->log_exception($e, 'payment-approved to customer', $appointment['id'] ?? null);
+                }
+            }
+
+            // Notify provider.
+            $send_provider = filter_var(
+                $this->CI->providers_model->get_setting($provider['id'], 'notifications'),
+                FILTER_VALIDATE_BOOLEAN,
+            );
+
+            if ($send_provider === true) {
+                config(['language' => $provider['language']]);
+                $this->CI->lang->load('translations');
+
+                try {
+                    $this->CI->email_messages->send_appointment_saved(
+                        $appointment,
+                        $provider,
+                        $service,
+                        $customer,
+                        $settings,
+                        lang('payment_approved_notification_subject'),
+                        lang('payment_confirmed_for_provider'),
+                        $provider_link,
+                        $provider['email'],
+                        $ics_stream,
+                        $provider['timezone'],
+                    );
+                } catch (Throwable $e) {
+                    $this->log_exception($e, 'payment-approved to provider', $appointment['id'] ?? null);
+                }
+            }
+
+            // Notify admins.
+            $admins = $this->CI->admins_model->get();
+
+            foreach ($admins as $admin) {
+                if ($admin['settings']['notifications'] === '0') {
+                    continue;
+                }
+
+                config(['language' => $admin['language']]);
+                $this->CI->lang->load('translations');
+
+                try {
+                    $this->CI->email_messages->send_appointment_saved(
+                        $appointment,
+                        $provider,
+                        $service,
+                        $customer,
+                        $settings,
+                        lang('payment_approved_notification_subject'),
+                        lang('payment_confirmed'),
+                        $provider_link,
+                        $admin['email'],
+                        $ics_stream,
+                        $admin['timezone'],
+                    );
+                } catch (Throwable $e) {
+                    $this->log_exception($e, 'payment-approved to admin', $appointment['id'] ?? null);
+                }
+            }
+        } catch (Throwable $e) {
+            $this->log_exception($e, 'payment-approved (general exception)', $appointment['id'] ?? null);
         } finally {
             config(['language' => $current_language ?? 'english']);
             $this->CI->lang->load('translations');

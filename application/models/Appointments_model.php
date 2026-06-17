@@ -27,6 +27,7 @@ class Appointments_model extends EA_Model
         'id_users_provider' => 'integer',
         'id_users_customer' => 'integer',
         'id_services' => 'integer',
+        'payment_required' => 'boolean',
     ];
 
     /**
@@ -798,5 +799,21 @@ class Appointments_model extends EA_Model
             ->group_end()
             ->get()
             ->num_rows() > 0;
+    }
+
+    /**
+     * Update the payment status of an appointment.
+     *
+     * @param int $appointment_id Appointment ID
+     * @param string $status Payment status ('none', 'pending', 'approved', 'rejected')
+     * @return bool
+     */
+    public function update_payment_status(int $appointment_id, string $status): bool
+    {
+        return $this->db->update(
+            'appointments',
+            ['payment_status' => $status, 'update_datetime' => date('Y-m-d H:i:s')],
+            ['id' => $appointment_id],
+        );
     }
 }

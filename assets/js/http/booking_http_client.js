@@ -252,6 +252,19 @@ App.Http.Booking = (function () {
                     return false;
                 }
 
+                if (response.requires_payment) {
+                    window.AppointmentHash = response.appointment_hash;
+                    window.PaymentAmount = response.amount;
+                    window.PaymentCurrency = response.currency;
+                    
+                    if (window.App && App.Pages && App.Pages.Booking && App.Pages.Booking.goToPaymentStep) {
+                        App.Pages.Booking.goToPaymentStep(response);
+                    } else {
+                        window.location.href = App.Utils.Url.siteUrl('booking/reschedule/' + response.appointment_hash);
+                    }
+                    return;
+                }
+
                 window.location.href = App.Utils.Url.siteUrl('booking_confirmation/of/' + response.appointment_hash);
             })
             .fail(() => {
@@ -427,11 +440,53 @@ App.Http.Booking = (function () {
         });
     }
 
+    /**
+     * Create a MercadoPago payment preference.
+     *
+     * @param {Object} paymentData Payment data
+     */
+    function createPaymentPreference(paymentData) {
+        const url = App.Utils.Url.siteUrl('payments/create_preference');
+
+        const data = {
+            csrf_token: vars('csrf_token'),
+            appointment_hash: paymentData.appointment_hash,
+            amount: paymentData.amount,
+            currency: paymentData.currency,
+            payer_email: paymentData.payer_email,
+            payer_name: paymentData.payer_name,
+        };
+
+        return $.ajax({
+            url: url,
+            method: 'post',
+            data: data,
+            dataType: 'json',
+        });
+    }
+
+    /**
+     * Get payment status for an appointment.
+     *
+     * @param {String} appointmentHash Appointment hash
+     */
+    function getPaymentStatus(appointmentHash) {
+        const url = App.Utils.Url.siteUrl('payments/status/' + appointmentHash);
+
+        return $.ajax({
+            url: url,
+            method: 'get',
+            dataType: 'json',
+        });
+    }
+
     return {
         registerAppointment,
         getAvailableHours,
         getUnavailableDates,
         applyPreviousUnavailableDates,
         deletePersonalInformation,
+        createPaymentPreference,
+        getPaymentStatus,
     };
 })();

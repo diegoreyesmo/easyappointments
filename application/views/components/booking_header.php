@@ -39,10 +39,23 @@
              style="height: 35px; width: 35px; background: rgba(0,0,0,0.2); padding: 8px; margin-right: 12px; margin-top: 6px; transition: all 0.3s linear;">
             <strong class="d-block text-center text-white-50" style="font-size: 12px; cursor: default;">3</strong>
         </div>
+        <?php if (isset($mercadopago_enabled) && $mercadopago_enabled): ?>
+        <div id="step-4" class="book-step d-inline-block float-start rounded" data-bs-toggle="tooltip"
+             data-tippy-content="<?= lang('payment_step') ?>"
+             style="height: 35px; width: 35px; background: rgba(0,0,0,0.2); padding: 8px; margin-right: 12px; margin-top: 6px; transition: all 0.3s linear;">
+            <strong class="d-block text-center text-white-50" style="font-size: 12px; cursor: default;">4</strong>
+        </div>
+        <div id="step-5" class="book-step d-inline-block float-start rounded" data-bs-toggle="tooltip"
+             data-tippy-content="<?= lang('appointment_confirmation') ?>"
+             style="height: 35px; width: 35px; background: rgba(0,0,0,0.2); padding: 8px; margin-right: 0; margin-top: 6px; transition: all 0.3s linear;">
+            <strong class="d-block text-center text-white-50" style="font-size: 12px; cursor: default;">5</strong>
+        </div>
+        <?php else: ?>
         <div id="step-4" class="book-step d-inline-block float-start rounded" data-bs-toggle="tooltip"
              data-tippy-content="<?= lang('appointment_confirmation') ?>"
              style="height: 35px; width: 35px; background: rgba(0,0,0,0.2); padding: 8px; margin-right: 0; margin-top: 6px; transition: all 0.3s linear;">
             <strong class="d-block text-center text-white-50" style="font-size: 12px; cursor: default;">4</strong>
         </div>
+        <?php endif; ?>
     </div>
 </div>
