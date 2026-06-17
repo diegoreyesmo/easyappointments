@@ -240,9 +240,11 @@ class Payments_model extends EA_Model
      * Filter transaction data to only allowed fields.
      *
      * @param array &$transaction Transaction data reference
+     * @param array $fields Optional additional field names to include
      */
-    public function only(array &$transaction): void
+    public function only(array &$transaction, array $fields = []): void
     {
-        $transaction = array_intersect_key($transaction, array_flip($this->allowed_transaction_fields));
+        $allowed = array_unique(array_merge($this->allowed_transaction_fields, $fields));
+        $transaction = array_intersect_key($transaction, array_flip($allowed));
     }
 }
